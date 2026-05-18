@@ -119,8 +119,11 @@ async function runSCIMClient() {
 
     // Fetch Users
     const usersResponse = await axios.get(
-        `${BASE_URL}/Users`
-    );
+        `${BASE_URL}/Users`,{
+            headers: {
+        Authorization: "Bearer scim-secret-token"
+    }
+        });
 
     const users = usersResponse.data.Resources;
 

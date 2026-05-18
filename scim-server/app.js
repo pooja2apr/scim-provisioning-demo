@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const User = require("./models/User");
 const Group = require("./models/Group");
+const authenticateSCIM = require("./middleware/auth");
 
 const app = express();
 
@@ -22,7 +23,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.get("/", (req, res) => {
   res.send("SCIM Server Running");
 });
-app.post("/Users", async (req, res) => {
+app.post("/Users",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -52,7 +53,7 @@ app.post("/Users", async (req, res) => {
 
 });
 
-app.get("/Users", async (req, res) => {
+app.get("/Users",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -73,7 +74,7 @@ app.get("/Users", async (req, res) => {
 
 });
 
-app.patch("/Users/:id", async (req, res) => {
+app.patch("/Users/:id",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -109,7 +110,7 @@ app.patch("/Users/:id", async (req, res) => {
     }
 
 });
-app.delete("/Users/:id", async (req, res) => {
+app.delete("/Users/:id",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -140,7 +141,7 @@ app.delete("/Users/:id", async (req, res) => {
 
 });
 
-app.post("/Groups", async (req, res) => {
+app.post("/Groups",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -166,7 +167,7 @@ app.post("/Groups", async (req, res) => {
 
 });
 
-app.get("/Groups", async (req, res) => {
+app.get("/Groups", authenticateSCIM,async (req, res) => {
 
     try {
 
@@ -186,7 +187,7 @@ app.get("/Groups", async (req, res) => {
     }
 
 });
-app.patch("/Groups/:id", async (req, res) => {
+app.patch("/Groups/:id",authenticateSCIM, async (req, res) => {
 
     try {
 
@@ -222,7 +223,7 @@ app.patch("/Groups/:id", async (req, res) => {
     }
 
 });
-app.delete("/Groups/:id", async (req, res) => {
+app.delete("/Groups/:id",authenticateSCIM, async (req, res) => {
 
     try {
 
