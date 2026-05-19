@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 const User = require("./models/User");
 const Group = require("./models/Group");
 const authenticateSCIM = require("./middleware/auth");
+const writeLog = require("./utils/logger");
+const validateUser = require("./validators/userValidator");
+const validateGroup = require("./validators/groupValidator");
 
 const app = express();
 
@@ -27,6 +30,15 @@ app.post("/Users",authenticateSCIM, async (req, res) => {
 
     try {
 
+        const validationError = validateUser(req.body);
+
+if (validationError) {
+
+    return res.status(400).json({
+        error: validationError
+    });
+
+}
         const newUser = new User({
 
             userName: req.body.userName,
@@ -40,8 +52,12 @@ app.post("/Users",authenticateSCIM, async (req, res) => {
         });
 
         await newUser.save();
-
+        writeLog(
+    "CREATE_USER",
+    newUser.userName
+);
         res.status(201).json(newUser);
+        
 
     } catch (err) {
 
@@ -117,6 +133,10 @@ app.delete("/Users/:id",authenticateSCIM, async (req, res) => {
         const deletedUser = await User.findByIdAndDelete(
             req.params.id
         );
+        writeLog(
+    "DELETE_USER",
+    deletedUser.userName
+);
 
         if (!deletedUser) {
 
@@ -142,9 +162,18 @@ app.delete("/Users/:id",authenticateSCIM, async (req, res) => {
 });
 
 app.post("/Groups",authenticateSCIM, async (req, res) => {
+    const validationError = validateGroup(req.body);
+
+if (validationError) {
+
+    return res.status(400).json({
+        error: validationError
+    });
+
+}
 
     try {
-
+        
         const newGroup = new Group({
 
             displayName: req.body.displayName,
@@ -154,6 +183,10 @@ app.post("/Groups",authenticateSCIM, async (req, res) => {
         });
 
         await newGroup.save();
+        writeLog(
+    "CREATE_GROUP",
+    newGroup.displayName
+);
 
         res.status(201).json(newGroup);
 
