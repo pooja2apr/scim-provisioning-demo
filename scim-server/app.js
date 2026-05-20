@@ -8,6 +8,7 @@ const authenticateSCIM = require("./middleware/auth");
 const writeLog = require("./utils/logger");
 const validateUser = require("./validators/userValidator");
 const validateGroup = require("./validators/groupValidator");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
@@ -23,9 +24,50 @@ mongoose.connect(process.env.MONGO_URI)
   console.log("Mongo Error:", err);
 });
 
+
+
+
 app.get("/", (req, res) => {
   res.send("SCIM Server Running");
 });
+
+app.post("/login", (req, res) => {
+
+    const { username, password } = req.body;
+
+    // Simple demo credentials
+
+    if (
+        username !== "admin" ||
+        password !== "password123"
+    ) {
+
+        return res.status(401).json({
+            message: "Invalid credentials"
+        });
+
+    }
+
+    const token = jwt.sign(
+
+        {
+            username: username
+        },
+
+        process.env.JWT_SECRET,
+
+        {
+            expiresIn: "1h"
+        }
+
+    );
+
+    res.json({
+        token
+    });
+
+});
+
 app.post("/Users",authenticateSCIM, async (req, res) => {
 
     try {

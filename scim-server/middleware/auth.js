@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const jwt = require("jsonwebtoken");
+
 function authenticateSCIM(req, res, next) {
 
     const authHeader = req.headers.authorization;
@@ -14,15 +16,24 @@ function authenticateSCIM(req, res, next) {
 
     const token = authHeader.split(" ")[1];
 
-    if (token !== process.env.SCIM_TOKEN) {
+    try {
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
+        req.user = decoded;
+
+        next();
+
+    } catch (err) {
 
         return res.status(403).json({
-            message: "Invalid SCIM token"
+            message: "Invalid or expired token"
         });
 
     }
-
-    next();
 
 }
 

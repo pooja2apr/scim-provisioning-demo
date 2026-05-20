@@ -8,7 +8,19 @@ function validateUser(data) {
 
     }
 
-    if (!data.email || !validator.isEmail(data.email)) {
+    if (
+        !data.emails ||
+        !Array.isArray(data.emails) ||
+        data.emails.length === 0
+    ) {
+
+        return "At least one email is required";
+
+    }
+
+    const email = data.emails[0].value;
+
+    if (!validator.isEmail(email)) {
 
         return "Valid email is required";
 
