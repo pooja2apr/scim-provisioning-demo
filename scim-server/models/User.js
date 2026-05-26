@@ -7,11 +7,19 @@ const UserSchema = new mongoose.Schema({
         required: true
     },
 
-    givenName: String,
+    name: {
 
-    familyName: String,
+        givenName: String,
 
-    email: String,
+        familyName: String
+
+    },
+
+    emails: [
+        {
+            value: String
+        }
+    ],
 
     active: {
         type: Boolean,

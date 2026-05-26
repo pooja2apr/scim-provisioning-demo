@@ -2,6 +2,12 @@ const validator = require("validator");
 
 function validateUser(data) {
 
+    if (!data) {
+
+        return "Request body missing";
+
+    }
+
     if (!data.userName || data.userName.trim() === "") {
 
         return "Username is required";
@@ -27,7 +33,6 @@ function validateUser(data) {
     }
 
     return null;
-
 }
 
 module.exports = validateUser;

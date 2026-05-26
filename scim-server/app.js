@@ -12,7 +12,12 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({
+    type: [
+        "application/json",
+        "application/scim+json"
+    ]
+}));
 
 console.log("Starting server...");
 
@@ -57,7 +62,7 @@ app.post("/login", (req, res) => {
         process.env.JWT_SECRET,
 
         {
-            expiresIn: "1h"
+            expiresIn: "7d"
         }
 
     );
@@ -69,10 +74,8 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/Users",authenticateSCIM, async (req, res) => {
-
-    try {
-
-        const validationError = validateUser(req.body);
+    console.log("BODY:", req.body);
+    const validationError = validateUser(req.body);
 
 if (validationError) {
 
@@ -81,45 +84,224 @@ if (validationError) {
     });
 
 }
+
+    try {
+
         const newUser = new User({
 
-            userName: req.body.userName,
+    userName: req.body.userName,
 
-            givenName: req.body.givenName,
+    name: {
 
-            familyName: req.body.familyName,
+        givenName: req.body.name?.givenName,
 
-            email: req.body.email
+        familyName: req.body.name?.familyName
 
-        });
+    },
 
-        await newUser.save();
-        writeLog(
-    "CREATE_USER",
-    newUser.userName
-);
-        res.status(201).json(newUser);
-        
+    emails: req.body.emails || [],
 
-    } catch (err) {
+    active: req.body.active !== undefined
+        ? req.body.active
+        : true
 
-        res.status(500).json({
-            error: err.message
-        });
+});
+   
+
+        const savedUser = await newUser.save();
+
+        res.set("Content-Type", "application/scim+json");
+
+        res.status(201).json({
+
+    schemas: [
+        "urn:ietf:params:scim:schemas:core:2.0:User"
+    ],
+
+    id: savedUser._id.toString(),
+    externalId: savedUser._id.toString(),
+
+    userName: savedUser.userName,
+
+    active: savedUser.active,
+
+    name: savedUser.name,
+
+    emails: savedUser.emails,
+
+    meta: {
+	resourceType: "User"
 
     }
 
 });
 
-app.get("/Users",authenticateSCIM, async (req, res) => {
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+});
+
+app.get("/Users", authenticateSCIM, async (req, res) => {
 
     try {
+
+        const filter = req.query.filter;
+
+        // FILTER SUPPORT
+
+        if (filter) {
+
+            const match =
+                filter.match(/userName eq "(.+)"/);
+
+            if (match) {
+
+                const username = match[1];
+
+                const users = await User.find({
+
+                    userName: username
+
+                });
+
+                return res.json({
+
+                    schemas: [
+                        "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+                    ],
+
+                    totalResults: users.length,
+
+                    startIndex: 1,
+
+                    itemsPerPage: users.length,
+
+                    Resources: users.map(user => ({
+
+                        schemas: [
+                            "urn:ietf:params:scim:schemas:core:2.0:User"
+                        ],
+
+                        id: user._id.toString(),
+
+                        externalId:
+                            user._id.toString(),
+
+                        userName: user.userName,
+
+                        active: user.active,
+
+                        name: user.name,
+
+                        emails: user.emails,
+
+                        meta: {
+                            resourceType: "User"
+                        }
+
+                    }))
+
+                });
+
+            }
+
+        }
+
+        // RETURN ALL USERS
 
         const users = await User.find();
 
         res.json({
+
+            schemas: [
+                "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+            ],
+
             totalResults: users.length,
-            Resources: users
+
+            startIndex: 1,
+
+            itemsPerPage: users.length,
+
+            Resources: users.map(user => ({
+
+                schemas: [
+                    "urn:ietf:params:scim:schemas:core:2.0:User"
+                ],
+
+                id: user._id.toString(),
+
+                externalId:
+                    user._id.toString(),
+
+                userName: user.userName,
+
+                active: user.active,
+
+                name: user.name,
+
+                emails: user.emails,
+
+                meta: {
+                    resourceType: "User"
+                }
+
+            }))
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+
+});
+app.get("/Users/:id", authenticateSCIM, async (req, res) => {
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+
+            return res.status(400).json({
+                error: "Invalid user id"
+            });
+
+        }
+
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                error: "User not found"
+            });
+
+        }
+
+        res.json({
+
+            schemas: [
+                "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+
+            id: user._id.toString(),
+            externalId: user._id.toString(),
+
+            userName: user.userName,
+
+            active: user.active,
+
+            name: user.name,
+
+            emails: user.emails
+
         });
 
     } catch (err) {
@@ -131,16 +313,34 @@ app.get("/Users",authenticateSCIM, async (req, res) => {
     }
 
 });
-
-app.patch("/Users/:id",authenticateSCIM, async (req, res) => {
+app.put("/Users/:id", authenticateSCIM, async (req, res) => {
 
     try {
+
+        console.log("PUT BODY:");
+        console.log(JSON.stringify(req.body, null, 2));
 
         const updatedUser = await User.findByIdAndUpdate(
 
             req.params.id,
 
-            req.body,
+            {
+
+                userName: req.body.userName,
+
+                name: {
+
+                    givenName: req.body.name?.givenName,
+
+                    familyName: req.body.name?.familyName
+
+                },
+
+                emails: req.body.emails || [],
+
+                active: req.body.active
+
+            },
 
             { new: true }
 
@@ -149,17 +349,37 @@ app.patch("/Users/:id",authenticateSCIM, async (req, res) => {
         if (!updatedUser) {
 
             return res.status(404).json({
-                message: "User not found"
+                error: "User not found"
             });
 
         }
 
         res.json({
-            message: "User updated successfully",
-            user: updatedUser
+
+            schemas: [
+                "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+
+            id: updatedUser._id.toString(),
+            externalId: updatedUser._id.toString(),
+
+            userName: updatedUser.userName,
+
+            active: updatedUser.active,
+
+            name: updatedUser.name,
+
+            emails: updatedUser.emails,
+
+            meta: {
+                resourceType: "User"
+            }
+
         });
 
     } catch (err) {
+
+        console.log(err);
 
         res.status(500).json({
             error: err.message
