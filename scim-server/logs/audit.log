@@ -13,3 +13,23 @@ Jonathan
 CREATE_USER
 Jemima
 
+
+[2026-05-27T11:51:26.661Z]
+CREATE_GROUP
+scim-test-group
+
+
+[2026-05-27T11:52:48.997Z]
+CREATE_GROUP
+scim-test-group
+
+
+[2026-05-27T11:55:46.753Z]
+CREATE_GROUP
+scim-test-group
+
+
+[2026-05-27T12:08:37.648Z]
+CREATE_GROUP
+scim-test-group
+

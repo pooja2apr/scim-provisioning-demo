@@ -423,6 +423,113 @@ app.delete("/Users/:id",authenticateSCIM, async (req, res) => {
 
 });
 
+
+app.patch("/Users/:id", authenticateSCIM, async (req, res) => {
+
+    try {
+
+        console.log("PATCH BODY:");
+        console.log(JSON.stringify(req.body, null, 2));
+
+        const operations = req.body.Operations;
+
+        if (!operations || !Array.isArray(operations)) {
+
+            return res.status(400).json({
+                error: "Invalid PATCH payload"
+            });
+
+        }
+
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+
+            return res.status(404).json({
+                error: "User not found"
+            });
+
+        }
+
+        operations.forEach(operation => {
+
+            const op =
+                operation.op?.toLowerCase();
+
+            const path = operation.path;
+
+            const value = operation.value;
+
+            // REPLACE
+
+            if (op === "replace") {
+
+                if (path === "active") {
+
+                    user.active = value;
+
+                }
+
+                if (path === "name.givenName") {
+
+                    user.name.givenName = value;
+
+                }
+
+                if (path === "name.familyName") {
+
+                    user.name.familyName = value;
+
+                }
+
+                if (path === "displayName") {
+
+                    user.displayName = value;
+
+                }
+
+            }
+
+        });
+
+        await user.save();
+
+        res.json({
+
+            schemas: [
+                "urn:ietf:params:scim:schemas:core:2.0:User"
+            ],
+
+            id: user._id.toString(),
+
+            externalId: user._id.toString(),
+
+            userName: user.userName,
+
+            active: user.active,
+
+            name: user.name,
+
+            emails: user.emails,
+
+            meta: {
+                resourceType: "User"
+            }
+
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
+});
+
 app.post("/Groups",authenticateSCIM, async (req, res) => {
     const validationError = validateGroup(req.body);
 
@@ -450,7 +557,23 @@ if (validationError) {
     newGroup.displayName
 );
 
-        res.status(201).json(newGroup);
+       res.status(201).json({
+
+    schemas: [
+        "urn:ietf:params:scim:schemas:core:2.0:Group"
+    ],
+
+    id: newGroup._id.toString(),
+
+    displayName: newGroup.displayName,
+
+    members: newGroup.members,
+
+    meta: {
+        resourceType: "Group"
+    }
+
+});
 
     } catch (err) {
 
@@ -482,34 +605,136 @@ app.get("/Groups", authenticateSCIM,async (req, res) => {
     }
 
 });
-app.patch("/Groups/:id",authenticateSCIM, async (req, res) => {
+app.get("/Groups/:id", authenticateSCIM, async (req, res) => {
 
     try {
 
-        const updatedGroup = await Group.findByIdAndUpdate(
+        const group = await Group.findById(req.params.id);
 
-            req.params.id,
-
-            req.body,
-
-            { new: true }
-
-        );
-
-        if (!updatedGroup) {
+        if (!group) {
 
             return res.status(404).json({
-                message: "Group not found"
+                error: "Group not found"
             });
 
         }
 
         res.json({
-            message: "Group updated successfully",
-            group: updatedGroup
+
+            schemas: [
+                "urn:ietf:params:scim:schemas:core:2.0:Group"
+            ],
+
+            id: group._id.toString(),
+
+            displayName: group.displayName,
+
+            members: group.members,
+
+            meta: {
+                resourceType: "Group"
+            }
+
         });
 
     } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            error: err.message
+        });
+
+    }
+
+});
+app.put("/Groups/:id", authenticateSCIM, async (req, res) => {
+
+    try {
+
+        console.log("GROUP PATCH BODY:");
+        console.log(JSON.stringify(req.body, null, 2));
+
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+
+            return res.status(404).json({
+                error: "Group not found"
+            });
+
+        }
+
+        const operations =
+            req.body.Operations || [];
+
+        operations.forEach(operation => {
+
+            const op =
+                operation.op?.toLowerCase();
+
+            // ADD MEMBERS
+
+            if (
+                op === "add" &&
+                operation.path === "members"
+            ) {
+
+                const newMembers =
+                    operation.value || [];
+
+                group.members.push(...newMembers);
+
+            }
+
+            // REMOVE MEMBERS
+
+            if (
+                op === "remove" &&
+                operation.path === "members"
+            ) {
+
+                const removeMembers =
+                    operation.value || [];
+
+                group.members =
+                    group.members.filter(member =>
+
+                        !removeMembers.some(
+                            removeMember =>
+
+                                removeMember.value ===
+                                member.value
+                        )
+                    );
+
+            }
+
+        });
+
+        await group.save();
+
+        res.json({
+
+            schemas: [
+                "urn:ietf:params:scim:schemas:core:2.0:Group"
+            ],
+
+            id: group._id.toString(),
+
+            displayName: group.displayName,
+
+            members: group.members,
+
+            meta: {
+                resourceType: "Group"
+            }
+
+        });
+
+    } catch (err) {
+
+        console.log(err);
 
         res.status(500).json({
             error: err.message

@@ -10,7 +10,7 @@ function validateGroup(data) {
 
         for (const member of data.members) {
 
-            if (!member.userId || !member.display) {
+            if (!member.value || !member.display) {
 
                 return "Each member must have userId and display";
 
